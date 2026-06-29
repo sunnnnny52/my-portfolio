@@ -59,7 +59,7 @@ th,td{
 </div>
 
 <div class="card">
-<h2>股票（BUY / SELL + 即時PnL）</h2>
+<h2>股票（BUY / SELL + PnL）</h2>
 
 <input id="stockSymbol" placeholder="AAPL">
 <input id="stockQty" type="number" placeholder="數量">
@@ -150,7 +150,7 @@ th,td{
 <script>
 
 /* ================= CONFIG ================= */
-const FINNHUB_KEY = d90ki7hr01qj6urtkte0d90ki7hr01qj6urtkteg;
+const FINNHUB_KEY = "d90ki7hr01qj6urtkte0d90ki7hr01qj6urtkteg";
 let priceCache = {};
 
 /* ================= DATA ================= */
@@ -234,7 +234,6 @@ save();
 /* ================= RENDER ================= */
 function render(){
 
-/* STOCK MAP */
 let map = {};
 
 data.stocks.forEach(t => {
@@ -268,12 +267,8 @@ if(qty <= 0) continue;
 
 let avgCost = s.buy ? s.cost / s.buy : 0;
 
-/* 🔥 fallback if no API key */
-let price = avgCost;
-
-if(FINNHUB_KEY !== "YOUR_API_KEY_HERE"){
-price = let price = priceCache[symbol] || avgCost;;
-}
+/* 🔥 FIXED PRICE LOGIC */
+let price = priceCache[symbol] || avgCost;
 
 let value = qty * price;
 let pnl = (price - avgCost) * qty;
@@ -296,7 +291,6 @@ ${pnl.toFixed(2)}
 
 }
 
-/* FIX DOM SAFE ACCESS */
 document.getElementById("stockTable").innerHTML = stockHTML;
 
 /* SAVINGS */
@@ -352,10 +346,10 @@ document.getElementById("netWorthEl").textContent =
 /* INIT */
 render();
 
-/* 🔥 auto refresh price every 30s */
+/* AUTO REFRESH PRICE CACHE */
 setInterval(() => {
-  priceCache = {};
-  render();
+priceCache = {};
+render();
 }, 30000);
 
 </script>
