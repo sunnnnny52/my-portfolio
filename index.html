@@ -48,6 +48,10 @@ th,td{
 <p>負債: $<span id="debtTotal">0</span></p>
 
 <h3>淨資產: $<span id="netWorth">0</span></h3>
+
+<h3>資產配置</h3>
+<canvas id="assetChart" height="200"></canvas>
+
 </div>
 
 <div class="card">
@@ -139,10 +143,13 @@ th,td{
 </table>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
 
 const FINNHUB_KEY = "d90vofpr01qpn7h4jgo0d90vofpr01qpn7h4jgog";
 let priceCache = {};
+let assetChart = null;
 
 async function getPrice(symbol){
 
@@ -171,7 +178,10 @@ async function getPrice(symbol){
 
     console.error(err);
 
-    return 0;
+    return {
+      current: 0,
+      previousClose: 0
+    };
   }
 }
 
@@ -425,6 +435,28 @@ data.stocks.forEach((t,index)=>{
 });
 
 document.getElementById("tradeTable").innerHTML = tradeHTML;
+
+const chartData = [
+  stockTotal,
+  savingTotal,
+  fixedTotal
+];
+
+if(assetChart){
+  assetChart.destroy();
+}
+
+const ctx = document.getElementById("assetChart");
+
+assetChart = new Chart(ctx,{
+  type:"pie",
+  data:{
+    labels:["股票","活期","定期"],
+    datasets:[{
+      data: chartData
+    }]
+  }
+});
 }
 
 render();
