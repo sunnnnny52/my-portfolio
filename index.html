@@ -77,6 +77,23 @@ th,td{
 </thead>
 <tbody id="stockTable"></tbody>
 </table>
+
+<h3>交易紀錄</h3>
+
+<table>
+<thead>
+<tr>
+<th>日期</th>
+<th>股票</th>
+<th>類型</th>
+<th>數量</th>
+<th>價格</th>
+<th>操作</th>
+</tr>
+</thead>
+<tbody id="tradeTable"></tbody>
+</table>
+
 </div>
 
 <div class="card">
@@ -172,10 +189,11 @@ function addStock(){
   if(!symbol) return;
 
   data.stocks.push({
-    symbol: symbol,
-    qty: Number(document.getElementById("stockQty").value),
-    price: Number(document.getElementById("stockPrice").value),
-    type: document.getElementById("stockType").value
+  symbol: symbol,
+  qty: Number(document.getElementById("stockQty").value),
+  price: Number(document.getElementById("stockPrice").value),
+  type: document.getElementById("stockType").value,
+  date: new Date().toLocaleString()
   });
 
   save();
@@ -204,6 +222,15 @@ function addDebt(){
     name: document.getElementById("debtName").value,
     amount: Number(document.getElementById("debtAmount").value)
   });
+  save();
+  
+function deleteTrade(index){
+  if(!confirm("刪除這筆交易？")){
+    return;
+  }
+
+  data.stocks.splice(index,1);
+
   save();
 }
 
@@ -328,6 +355,28 @@ ${pnl.toFixed(2)}
 
   document.getElementById("netWorth").textContent =
     (stockTotal + savingTotal + fixedTotal - debtTotal).toFixed(2);
+let tradeHTML = "";
+
+data.stocks.forEach((t,index)=>{
+
+  tradeHTML += `
+  <tr>
+    <td>${t.date || ""}</td>
+    <td>${t.symbol}</td>
+    <td>${t.type}</td>
+    <td>${t.qty}</td>
+    <td>${t.price}</td>
+    <td>
+      <button onclick="deleteTrade(${index})">
+        Delete
+      </button>
+    </td>
+  </tr>
+  `;
+
+});
+
+document.getElementById("tradeTable").innerHTML = tradeHTML;
 }
 
 render();
