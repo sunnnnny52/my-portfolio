@@ -2,13 +2,321 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Portfolio Tracker</title>
+
+<style>
+body{
+    font-family:Arial,sans-serif;
+    margin:20px;
+    background:#f5f5f5;
+}
+
+.card{
+    background:white;
+    padding:15px;
+    margin-bottom:15px;
+    border-radius:10px;
+}
+
+input{
+    padding:8px;
+    margin:3px;
+}
+
+button{
+    padding:8px 12px;
+    cursor:pointer;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+
+th,td{
+    border:1px solid #ddd;
+    padding:8px;
+    text-align:left;
+}
+
+h2{
+    margin-top:0;
+}
+</style>
 </head>
+
 <body>
 
 <h1>Portfolio Tracker</h1>
 
-<p>成功部署 🎉</p>
+<div class="card">
+<h2>Dashboard</h2>
+
+<p>股票市值: $<span id="stockTotal">0</span></p>
+<p>活期存款: $<span id="savingTotal">0</span></p>
+<p>定期存款: $<span id="fixedTotal">0</span></p>
+<p>負債: $<span id="debtTotal">0</span></p>
+
+<h3>淨資產: $<span id="netWorth">0</span></h3>
+</div>
+
+<div class="card">
+<h2>股票</h2>
+
+<input id="stockSymbol" placeholder="代號">
+<input id="stockQty" type="number" placeholder="數量">
+<input id="stockCost" type="number" placeholder="成本價">
+
+<button onclick="addStock()">新增</button>
+
+<table id="stockTable">
+<tr>
+<th>代號</th>
+<th>數量</th>
+<th>成本價</th>
+<th>成本值</th>
+</tr>
+</table>
+</div>
+
+<div class="card">
+<h2>活期存款</h2>
+
+<input id="savingName" placeholder="戶口">
+<input id="savingAmount" type="number" placeholder="金額">
+
+<button onclick="addSaving()">新增</button>
+
+<table id="savingTable">
+<tr>
+<th>戶口</th>
+<th>金額</th>
+</tr>
+</table>
+</div>
+
+<div class="card">
+<h2>定期存款</h2>
+
+<input id="fixedBank" placeholder="銀行">
+<input id="fixedAmount" type="number" placeholder="金額">
+<input id="fixedRate" type="number" placeholder="利率%">
+<input id="fixedDate" type="date">
+
+<button onclick="addFixed()">新增</button>
+
+<table id="fixedTable">
+<tr>
+<th>銀行</th>
+<th>金額</th>
+<th>利率</th>
+<th>到期日</th>
+</tr>
+</table>
+</div>
+
+<div class="card">
+<h2>負債</h2>
+
+<input id="debtName" placeholder="名稱">
+<input id="debtAmount" type="number" placeholder="金額">
+
+<button onclick="addDebt()">新增</button>
+
+<table id="debtTable">
+<tr>
+<th>名稱</th>
+<th>金額</th>
+</tr>
+</table>
+</div>
+
+<script>
+
+let data =
+JSON.parse(localStorage.getItem("portfolio")) || {
+stocks:[],
+savings:[],
+fixedDeposits:[],
+debts:[]
+};
+
+function save(){
+localStorage.setItem(
+"portfolio",
+JSON.stringify(data)
+);
+render();
+}
+
+function addStock(){
+
+data.stocks.push({
+symbol:document.getElementById("stockSymbol").value,
+qty:Number(document.getElementById("stockQty").value),
+cost:Number(document.getElementById("stockCost").value)
+});
+
+save();
+}
+
+function addSaving(){
+
+data.savings.push({
+name:document.getElementById("savingName").value,
+amount:Number(document.getElementById("savingAmount").value)
+});
+
+save();
+}
+
+function addFixed(){
+
+data.fixedDeposits.push({
+bank:document.getElementById("fixedBank").value,
+amount:Number(document.getElementById("fixedAmount").value),
+rate:Number(document.getElementById("fixedRate").value),
+date:document.getElementById("fixedDate").value
+});
+
+save();
+}
+
+function addDebt(){
+
+data.debts.push({
+name:document.getElementById("debtName").value,
+amount:Number(document.getElementById("debtAmount").value)
+});
+
+save();
+}
+
+function render(){
+
+let stockTable =
+`<tr>
+<th>代號</th>
+<th>數量</th>
+<th>成本價</th>
+<th>成本值</th>
+</tr>`;
+
+let stockTotal = 0;
+
+data.stocks.forEach(s=>{
+
+let value = s.qty * s.cost;
+
+stockTotal += value;
+
+stockTable += `
+<tr>
+<td>${s.symbol}</td>
+<td>${s.qty}</td>
+<td>${s.cost}</td>
+<td>${value.toFixed(2)}</td>
+</tr>
+`;
+});
+
+document.getElementById("stockTable").innerHTML =
+stockTable;
+
+let savingTable =
+`<tr><th>戶口</th><th>金額</th></tr>`;
+
+let savingTotal = 0;
+
+data.savings.forEach(s=>{
+
+savingTotal += s.amount;
+
+savingTable += `
+<tr>
+<td>${s.name}</td>
+<td>${s.amount}</td>
+</tr>
+`;
+});
+
+document.getElementById("savingTable").innerHTML =
+savingTable;
+
+let fixedTable =
+`<tr>
+<th>銀行</th>
+<th>金額</th>
+<th>利率</th>
+<th>到期日</th>
+</tr>`;
+
+let fixedTotal = 0;
+
+data.fixedDeposits.forEach(f=>{
+
+fixedTotal += f.amount;
+
+fixedTable += `
+<tr>
+<td>${f.bank}</td>
+<td>${f.amount}</td>
+<td>${f.rate}%</td>
+<td>${f.date}</td>
+</tr>
+`;
+});
+
+document.getElementById("fixedTable").innerHTML =
+fixedTable;
+
+let debtTable =
+`<tr><th>名稱</th><th>金額</th></tr>`;
+
+let debtTotal = 0;
+
+data.debts.forEach(d=>{
+
+debtTotal += d.amount;
+
+debtTable += `
+<tr>
+<td>${d.name}</td>
+<td>${d.amount}</td>
+</tr>
+`;
+});
+
+document.getElementById("debtTable").innerHTML =
+debtTable;
+
+document.getElementById("stockTotal").innerText =
+stockTotal.toFixed(2);
+
+document.getElementById("savingTotal").innerText =
+savingTotal.toFixed(2);
+
+document.getElementById("fixedTotal").innerText =
+fixedTotal.toFixed(2);
+
+document.getElementById("debtTotal").innerText =
+debtTotal.toFixed(2);
+
+let netWorth =
+stockTotal +
+savingTotal +
+fixedTotal -
+debtTotal;
+
+document.getElementById("netWorth").innerText =
+netWorth.toFixed(2);
+}
+
+render();
+
+</script>
 
 </body>
 </html>
