@@ -61,6 +61,11 @@ th,td{
 <input id="stockQty" type="number" placeholder="數量">
 <input id="stockPrice" type="number" placeholder="價格">
 
+<select id="stockCurrency">
+<option value="USD">USD</option>
+<option value="HKD">HKD</option>
+</select>
+
 <select id="stockType">
 <option value="BUY">BUY</option>
 <option value="SELL">SELL</option>
@@ -151,6 +156,8 @@ const FINNHUB_KEY = "d90vofpr01qpn7h4jgo0d90vofpr01qpn7h4jgog";
 let priceCache = {};
 let assetChart = null;
 
+const USDHKD = 7.8;
+
 async function getPrice(symbol){
 
   if(priceCache[symbol]){
@@ -235,9 +242,10 @@ function addStock(){
   symbol: symbol,
   qty: Number(document.getElementById("stockQty").value),
   price: Number(document.getElementById("stockPrice").value),
+  currency: document.getElementById("stockCurrency").value,
   type: document.getElementById("stockType").value,
   date: new Date().toLocaleString()
-  });
+});
 
   save();
 }
@@ -288,12 +296,13 @@ async function render(){
   data.stocks.forEach(t=>{
 
     if(!positions[t.symbol]){
-      positions[t.symbol] = {
-        buyQty:0,
-        sellQty:0,
-        cost:0
-      };
-    }
+    positions[t.symbol] = {
+      buyQty:0,
+      sellQty:0,
+      cost:0,
+      currency:t.currency || "USD"
+    };
+}
 
     if(t.type==="BUY"){
       positions[t.symbol].buyQty += t.qty;
@@ -328,7 +337,11 @@ const dayChangePct =
 
 const marketStatus = getMarketStatus();
 
-const value = qty * currentPrice;
+let value = qty * currentPrice;
+
+if(p.currency === "USD"){
+  value *= USDHKD;
+}
 
 const pnl =
   (currentPrice - avgCost) * qty;
