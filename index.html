@@ -71,6 +71,8 @@ th,td{
 <th>持倉</th>
 <th>平均成本</th>
 <th>現價</th>
+<th>日升跌%</th>
+<th>市場</th>
 <th>PnL</th>
 <th>市值</th>
 </tr>
@@ -156,11 +158,14 @@ async function getPrice(symbol){
 
     const data = await res.json();
 
-    const price = data.c || 0;
+    const quote = {
+      current: data.c || 0,
+    previousClose: data.pc || 0
+    };
 
-    priceCache[symbol] = price;
+    priceCache[symbol] = quote;
 
-    return price;
+    return quote;
 
   }catch(err){
 
@@ -168,6 +173,34 @@ async function getPrice(symbol){
 
     return 0;
   }
+}
+
+function getMarketStatus(){
+
+  const now = new Date();
+
+  const ny = new Date(
+    now.toLocaleString("en-US", {
+      timeZone: "America/New_York"
+    })
+  );
+
+  const minutes =
+    ny.getHours() * 60 + ny.getMinutes();
+
+  if(minutes >= 240 && minutes < 570){
+    return "Pre-Market";
+  }
+
+  if(minutes >= 570 && minutes < 960){
+    return "Open";
+  }
+
+  if(minutes >= 960 && minutes < 1200){
+    return "After Hours";
+  }
+
+  return "Closed";
 }
 
 let data = JSON.parse(localStorage.getItem("portfolio")) || {
@@ -273,11 +306,17 @@ async function render(){
 
     const avgCost = p.cost / p.buyQty;
 
-let currentPrice = await getPrice(symbol);
+const quote = await getPrice(symbol);
 
-if(currentPrice === 0){
-  currentPrice = avgCost;
-}
+let currentPrice = quote.current;
+const previousClose = quote.previousClose;
+
+const dayChangePct =
+  previousClose > 0
+    ? ((currentPrice - previousClose) / previousClose * 100)
+    : 0;
+
+const marketStatus = getMarketStatus();
 
 const value = qty * currentPrice;
 
@@ -292,9 +331,17 @@ stockHTML += `
 <td>${qty}</td>
 <td>${avgCost.toFixed(2)}</td>
 <td>${currentPrice.toFixed(2)}</td>
+
+<td class="${dayChangePct >= 0 ? 'profit' : 'loss'}">
+${dayChangePct.toFixed(2)}%
+</td>
+
+<td>${marketStatus}</td>
+
 <td class="${pnl >= 0 ? 'profit' : 'loss'}">
 ${pnl.toFixed(2)}
 </td>
+
 <td>${value.toFixed(2)}</td>
 </tr>
 `;
