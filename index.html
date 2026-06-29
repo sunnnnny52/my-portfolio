@@ -77,6 +77,7 @@ h2{
 <th>數量</th>
 <th>成本價</th>
 <th>成本值</th>
+<th>操作</th>
 </tr>
 </table>
 </div>
@@ -93,6 +94,7 @@ h2{
 <tr>
 <th>戶口</th>
 <th>金額</th>
+<th>操作</th>
 </tr>
 </table>
 </div>
@@ -132,6 +134,26 @@ h2{
 </tr>
 </table>
 </div>
+
+function deleteStock(index){
+  data.stocks.splice(index,1);
+  save();
+}
+
+function deleteSaving(index){
+  data.savings.splice(index,1);
+  save();
+}
+
+function deleteFixed(index){
+  data.fixedDeposits.splice(index,1);
+  save();
+}
+
+function deleteDebt(index){
+  data.debts.splice(index,1);
+  save();
+}
 
 <script>
 
@@ -196,13 +218,19 @@ save();
 
 function render(){
 
-let stockTable =
-`<tr>
-<th>代號</th>
-<th>數量</th>
-<th>成本價</th>
-<th>成本值</th>
-</tr>`;
+stockTable += `
+<tr>
+<td>${s.symbol}</td>
+<td>${s.qty}</td>
+<td>${s.cost}</td>
+<td>${value.toFixed(2)}</td>
+<td>
+<button onclick="deleteStock(${data.stocks.indexOf(s)})">
+Delete
+</button>
+</td>
+</tr>
+`;
 
 let stockTotal = 0;
 
@@ -230,7 +258,7 @@ let savingTable =
 
 let savingTotal = 0;
 
-data.savings.forEach(s=>{
+data.savings.forEach((s,index)=>{
 
 savingTotal += s.amount;
 
@@ -238,9 +266,13 @@ savingTable += `
 <tr>
 <td>${s.name}</td>
 <td>${s.amount}</td>
+<td>
+<button onclick="deleteSaving(${index})">
+Delete
+</button>
+</td>
 </tr>
 `;
-});
 
 document.getElementById("savingTable").innerHTML =
 savingTable;
