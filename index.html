@@ -59,11 +59,11 @@ th,td{
 </div>
 
 <div class="card">
-<h2>股票交易</h2>
+<h2>股票（即時 + PnL）</h2>
 
-<input id="stockSymbol" placeholder="代號">
+<input id="stockSymbol" placeholder="AAPL">
 <input id="stockQty" type="number" placeholder="數量">
-<input id="stockPrice" type="number" placeholder="價格">
+<input id="stockPrice" type="number" placeholder="買入價">
 
 <select id="stockType">
 <option value="BUY">BUY</option>
@@ -78,7 +78,8 @@ th,td{
 <th>代號</th>
 <th>持倉</th>
 <th>平均成本</th>
-<th>市值</th>
+<th>現價</th>
+<th>PnL</th>
 </tr>
 </thead>
 <tbody id="stockTable"></tbody>
@@ -148,8 +149,11 @@ th,td{
 
 <script>
 
-/* ---------------- DATA ---------------- */
+/* ===================== API ===================== */
+const FINNHUB_KEY = d90ki7hr01qj6urtkte0d90ki7hr01qj6urtkteg;
+let priceCache = {};
 
+/* ===================== DATA ===================== */
 let data = JSON.parse(localStorage.getItem("portfolio")) || {
 stocks:[],
 savings:[],
@@ -162,8 +166,25 @@ localStorage.setItem("portfolio", JSON.stringify(data));
 render();
 }
 
-/* ---------------- STOCK TRADE ---------------- */
+/* ===================== FINNHUB ===================== */
+async function getPrice(symbol){
 
+if(priceCache[symbol]){
+return priceCache[symbol];
+}
+
+let res = await fetch(
+`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_KEY}`
+);
+
+let d = await res.json();
+
+priceCache[symbol] = d.c;
+
+return d.c;
+}
+
+/* ===================== STOCK ===================== */
 function addStock(){
 
 data.stocks.push({
@@ -176,8 +197,7 @@ price: Number(stockPrice.value)
 save();
 }
 
-/* ---------------- SAVINGS ---------------- */
-
+/* ===================== OTHER ===================== */
 function addSaving(){
 data.savings.push({
 name: savingName.value,
@@ -185,8 +205,6 @@ amount: Number(savingAmount.value)
 });
 save();
 }
-
-/* ---------------- FIXED ---------------- */
 
 function addFixed(){
 data.fixedDeposits.push({
@@ -198,8 +216,6 @@ date: fixedDate.value
 save();
 }
 
-/* ---------------- DEBT ---------------- */
-
 function addDebt(){
 data.debts.push({
 name: debtName.value,
@@ -208,137 +224,106 @@ amount: Number(debtAmount.value)
 save();
 }
 
-/* ---------------- RENDER ---------------- */
+/* ===================== RENDER ===================== */
+async function render(){
 
-function render(){
-
-/* STOCK CALC */
+/* ---- STOCK MAP ---- */
 let map = {};
 
 data.stocks.forEach(t => {
 
 if(!map[t.symbol]){
-map[t.symbol] = {
-buyQty:0,
-sellQty:0,
-cost:0
-};
+map[t.symbol] = {buy:0,sell:0,cost:0};
 }
 
-if(t.type === "BUY"){
-map[t.symbol].buyQty += t.qty;
+if(t.type==="BUY"){
+map[t.symbol].buy += t.qty;
 map[t.symbol].cost += t.qty * t.price;
 }
 
-if(t.type === "SELL"){
-map[t.symbol].sellQty += t.qty;
+if(t.type==="SELL"){
+map[t.symbol].sell += t.qty;
 }
 
 });
 
-/* STOCK TABLE */
 let stockHTML = "";
 let stockTotal = 0;
 
-Object.keys(map).forEach(symbol => {
+/* ---- LOOP STOCKS ---- */
+for(let symbol of Object.keys(map)){
 
 let s = map[symbol];
 
-let qty = s.buyQty - s.sellQty;
+let qty = s.buy - s.sell;
 
-/* 🔥 加呢行：0 持倉直接跳過 */
-if(qty === 0) return;
+if(qty <= 0) continue;
 
-let avgCost = s.buyQty ? s.cost / s.buyQty : 0;
-let value = qty * avgCost;
+let avgCost = s.buy ? s.cost / s.buy : 0;
+let price = await getPrice(symbol);
+
+let value = qty * price;
+let pnl = (price - avgCost) * qty;
+
 stockTotal += value;
+
+let color = pnl >= 0 ? "green" : "red";
 
 stockHTML += `
 <tr>
 <td>${symbol}</td>
 <td>${qty}</td>
 <td>${avgCost.toFixed(2)}</td>
-<td>${value.toFixed(2)}</td>
+<td>${price.toFixed(2)}</td>
+<td style="color:${color};font-weight:bold">
+${pnl.toFixed(2)}
+</td>
 </tr>
 `;
-
-});
-
-let s = map[symbol];
-
-let qty = s.buyQty - s.sellQty;
-let avgCost = s.buyQty ? s.cost / s.buyQty : 0;
-
-let value = qty * avgCost;
-stockTotal += value;
-
-stockHTML += `
-<tr>
-<td>${symbol}</td>
-<td>${qty}</td>
-<td>${avgCost.toFixed(2)}</td>
-<td>${value.toFixed(2)}</td>
-</tr>
-`;
-
-});
+}
 
 stockTable.innerHTML = stockHTML;
 
-/* SAVINGS */
+/* ---- SAVING ---- */
 let savingHTML = "";
 let savingTotal = 0;
 
 data.savings.forEach(s=>{
 savingTotal += s.amount;
-
-savingHTML += `
-<tr>
-<td>${s.name}</td>
-<td>${s.amount}</td>
-</tr>
-`;
+savingHTML += `<tr><td>${s.name}</td><td>${s.amount}</td></tr>`;
 });
 
 savingTable.innerHTML = savingHTML;
 
-/* FIXED */
+/* ---- FIXED ---- */
 let fixedHTML = "";
 let fixedTotal = 0;
 
 data.fixedDeposits.forEach(f=>{
 fixedTotal += f.amount;
-
 fixedHTML += `
 <tr>
 <td>${f.bank}</td>
 <td>${f.amount}</td>
 <td>${f.rate}%</td>
 <td>${f.date}</td>
-</tr>
-`;
+</tr>`;
 });
 
 fixedTable.innerHTML = fixedHTML;
 
-/* DEBT */
+/* ---- DEBT ---- */
 let debtHTML = "";
 let debtTotal = 0;
 
 data.debts.forEach(d=>{
 debtTotal += d.amount;
-
-debtHTML += `
-<tr>
-<td>${d.name}</td>
-<td>${d.amount}</td>
-</tr>
-`;
+debtHTML += `<tr><td>${d.name}</td><td>${d.amount}</td></tr>`;
 });
 
 debtTable.innerHTML = debtHTML;
 
-/* DASHBOARD */
+/* ---- DASHBOARD ---- */
 stockTotalEl.textContent = stockTotal.toFixed(2);
 savingTotalEl.textContent = savingTotal.toFixed(2);
 fixedTotalEl.textContent = fixedTotal.toFixed(2);
@@ -349,7 +334,7 @@ netWorthEl.textContent =
 
 }
 
-/* init */
+/* ===================== INIT ===================== */
 render();
 
 </script>
