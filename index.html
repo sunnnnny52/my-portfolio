@@ -50,20 +50,20 @@ th,td{
 <div class="card">
 <h2>Dashboard</h2>
 
-<p>股票市值: $<span id="stockTotal">0</span></p>
-<p>活期存款: $<span id="savingTotal">0</span></p>
-<p>定期存款: $<span id="fixedTotal">0</span></p>
-<p>負債: $<span id="debtTotal">0</span></p>
+<p>股票市值: $<span id="stockTotalEl">0</span></p>
+<p>活期存款: $<span id="savingTotalEl">0</span></p>
+<p>定期存款: $<span id="fixedTotalEl">0</span></p>
+<p>負債: $<span id="debtTotalEl">0</span></p>
 
-<h3>淨資產: $<span id="netWorth">0</span></h3>
+<h3>淨資產: $<span id="netWorthEl">0</span></h3>
 </div>
 
 <div class="card">
-<h2>股票（即時 + PnL）</h2>
+<h2>股票（BUY / SELL + 即時PnL）</h2>
 
 <input id="stockSymbol" placeholder="AAPL">
 <input id="stockQty" type="number" placeholder="數量">
-<input id="stockPrice" type="number" placeholder="買入價">
+<input id="stockPrice" type="number" placeholder="價格">
 
 <select id="stockType">
 <option value="BUY">BUY</option>
@@ -149,11 +149,11 @@ th,td{
 
 <script>
 
-/* ===================== API ===================== */
+/* ================= CONFIG ================= */
 const FINNHUB_KEY = d90ki7hr01qj6urtkte0d90ki7hr01qj6urtkteg;
 let priceCache = {};
 
-/* ===================== DATA ===================== */
+/* ================= DATA ================= */
 let data = JSON.parse(localStorage.getItem("portfolio")) || {
 stocks:[],
 savings:[],
@@ -166,25 +166,32 @@ localStorage.setItem("portfolio", JSON.stringify(data));
 render();
 }
 
-/* ===================== FINNHUB ===================== */
+/* ================= FINNHUB ================= */
 async function getPrice(symbol){
 
 if(priceCache[symbol]){
 return priceCache[symbol];
 }
 
+try{
 let res = await fetch(
 `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_KEY}`
 );
 
 let d = await res.json();
 
-priceCache[symbol] = d.c;
+let price = d.c || 0;
+priceCache[symbol] = price;
 
-return d.c;
+return price;
+
+}catch(e){
+return 0;
 }
 
-/* ===================== STOCK ===================== */
+}
+
+/* ================= STOCK ================= */
 function addStock(){
 
 data.stocks.push({
@@ -197,7 +204,7 @@ price: Number(stockPrice.value)
 save();
 }
 
-/* ===================== OTHER ===================== */
+/* ================= OTHER ================= */
 function addSaving(){
 data.savings.push({
 name: savingName.value,
@@ -224,10 +231,10 @@ amount: Number(debtAmount.value)
 save();
 }
 
-/* ===================== RENDER ===================== */
+/* ================= RENDER ================= */
 async function render(){
 
-/* ---- STOCK MAP ---- */
+/* STOCK MAP */
 let map = {};
 
 data.stocks.forEach(t => {
@@ -247,10 +254,10 @@ map[t.symbol].sell += t.qty;
 
 });
 
+/* STOCK TABLE */
 let stockHTML = "";
 let stockTotal = 0;
 
-/* ---- LOOP STOCKS ---- */
 for(let symbol of Object.keys(map)){
 
 let s = map[symbol];
@@ -260,7 +267,13 @@ let qty = s.buy - s.sell;
 if(qty <= 0) continue;
 
 let avgCost = s.buy ? s.cost / s.buy : 0;
-let price = await getPrice(symbol);
+
+/* 🔥 fallback if no API key */
+let price = avgCost;
+
+if(FINNHUB_KEY !== "YOUR_API_KEY_HERE"){
+price = await getPrice(symbol);
+}
 
 let value = qty * price;
 let pnl = (price - avgCost) * qty;
@@ -280,11 +293,13 @@ ${pnl.toFixed(2)}
 </td>
 </tr>
 `;
+
 }
 
-stockTable.innerHTML = stockHTML;
+/* FIX DOM SAFE ACCESS */
+document.getElementById("stockTable").innerHTML = stockHTML;
 
-/* ---- SAVING ---- */
+/* SAVINGS */
 let savingHTML = "";
 let savingTotal = 0;
 
@@ -293,9 +308,9 @@ savingTotal += s.amount;
 savingHTML += `<tr><td>${s.name}</td><td>${s.amount}</td></tr>`;
 });
 
-savingTable.innerHTML = savingHTML;
+document.getElementById("savingTable").innerHTML = savingHTML;
 
-/* ---- FIXED ---- */
+/* FIXED */
 let fixedHTML = "";
 let fixedTotal = 0;
 
@@ -310,9 +325,9 @@ fixedHTML += `
 </tr>`;
 });
 
-fixedTable.innerHTML = fixedHTML;
+document.getElementById("fixedTable").innerHTML = fixedHTML;
 
-/* ---- DEBT ---- */
+/* DEBT */
 let debtHTML = "";
 let debtTotal = 0;
 
@@ -321,20 +336,20 @@ debtTotal += d.amount;
 debtHTML += `<tr><td>${d.name}</td><td>${d.amount}</td></tr>`;
 });
 
-debtTable.innerHTML = debtHTML;
+document.getElementById("debtTable").innerHTML = debtHTML;
 
-/* ---- DASHBOARD ---- */
-stockTotalEl.textContent = stockTotal.toFixed(2);
-savingTotalEl.textContent = savingTotal.toFixed(2);
-fixedTotalEl.textContent = fixedTotal.toFixed(2);
-debtTotalEl.textContent = debtTotal.toFixed(2);
+/* DASHBOARD */
+document.getElementById("stockTotalEl").textContent = stockTotal.toFixed(2);
+document.getElementById("savingTotalEl").textContent = savingTotal.toFixed(2);
+document.getElementById("fixedTotalEl").textContent = fixedTotal.toFixed(2);
+document.getElementById("debtTotalEl").textContent = debtTotal.toFixed(2);
 
-netWorthEl.textContent =
+document.getElementById("netWorthEl").textContent =
 (stockTotal + savingTotal + fixedTotal - debtTotal).toFixed(2);
 
 }
 
-/* ===================== INIT ===================== */
+/* INIT */
 render();
 
 </script>
