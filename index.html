@@ -7,39 +7,31 @@
 
 <style>
 body{
-    font-family:Arial,sans-serif;
-    margin:20px;
-    background:#f5f5f5;
+  font-family:Arial,sans-serif;
+  margin:20px;
+  background:#f5f5f5;
 }
-
 .card{
-    background:white;
-    padding:15px;
-    margin-bottom:15px;
-    border-radius:10px;
+  background:white;
+  padding:15px;
+  margin-bottom:15px;
+  border-radius:10px;
 }
-
-input,select{
-    padding:8px;
-    margin:3px;
+input,select,button{
+  padding:8px;
+  margin:3px;
 }
-
-button{
-    padding:8px 12px;
-    cursor:pointer;
-}
-
 table{
-    width:100%;
-    border-collapse:collapse;
-    margin-top:10px;
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
 }
-
 th,td{
-    border:1px solid #ddd;
-    padding:8px;
-    text-align:left;
+  border:1px solid #ddd;
+  padding:8px;
 }
+.profit{color:green;font-weight:bold;}
+.loss{color:red;font-weight:bold;}
 </style>
 </head>
 
@@ -50,16 +42,16 @@ th,td{
 <div class="card">
 <h2>Dashboard</h2>
 
-<p>股票市值: $<span id="stockTotalEl">0</span></p>
-<p>活期存款: $<span id="savingTotalEl">0</span></p>
-<p>定期存款: $<span id="fixedTotalEl">0</span></p>
-<p>負債: $<span id="debtTotalEl">0</span></p>
+<p>股票市值: $<span id="stockTotal">0</span></p>
+<p>活期存款: $<span id="savingTotal">0</span></p>
+<p>定期存款: $<span id="fixedTotal">0</span></p>
+<p>負債: $<span id="debtTotal">0</span></p>
 
-<h3>淨資產: $<span id="netWorthEl">0</span></h3>
+<h3>淨資產: $<span id="netWorth">0</span></h3>
 </div>
 
 <div class="card">
-<h2>股票（BUY / SELL + PnL）</h2>
+<h2>股票交易</h2>
 
 <input id="stockSymbol" placeholder="AAPL">
 <input id="stockQty" type="number" placeholder="數量">
@@ -75,11 +67,10 @@ th,td{
 <table>
 <thead>
 <tr>
-<th>代號</th>
+<th>股票</th>
 <th>持倉</th>
 <th>平均成本</th>
-<th>現價</th>
-<th>PnL</th>
+<th>持倉成本值</th>
 </tr>
 </thead>
 <tbody id="stockTable"></tbody>
@@ -95,12 +86,6 @@ th,td{
 <button onclick="addSaving()">新增</button>
 
 <table>
-<thead>
-<tr>
-<th>戶口</th>
-<th>金額</th>
-</tr>
-</thead>
 <tbody id="savingTable"></tbody>
 </table>
 </div>
@@ -110,20 +95,12 @@ th,td{
 
 <input id="fixedBank" placeholder="銀行">
 <input id="fixedAmount" type="number" placeholder="金額">
-<input id="fixedRate" type="number" placeholder="利率%">
+<input id="fixedRate" type="number" placeholder="利率">
 <input id="fixedDate" type="date">
 
 <button onclick="addFixed()">新增</button>
 
 <table>
-<thead>
-<tr>
-<th>銀行</th>
-<th>金額</th>
-<th>利率</th>
-<th>到期日</th>
-</tr>
-</thead>
 <tbody id="fixedTable"></tbody>
 </table>
 </div>
@@ -137,220 +114,176 @@ th,td{
 <button onclick="addDebt()">新增</button>
 
 <table>
-<thead>
-<tr>
-<th>名稱</th>
-<th>金額</th>
-</tr>
-</thead>
 <tbody id="debtTable"></tbody>
 </table>
 </div>
 
 <script>
 
-/* ================= CONFIG ================= */
-const FINNHUB_KEY = "d90ki7hr01qj6urtkte0d90ki7hr01qj6urtkteg";
-let priceCache = {};
-
-/* ================= DATA ================= */
 let data = JSON.parse(localStorage.getItem("portfolio")) || {
-stocks:[],
-savings:[],
-fixedDeposits:[],
-debts:[]
+  stocks: [],
+  savings: [],
+  fixedDeposits: [],
+  debts: []
 };
 
 function save(){
-localStorage.setItem("portfolio", JSON.stringify(data));
-render();
+  localStorage.setItem("portfolio", JSON.stringify(data));
+  render();
 }
 
-/* ================= FINNHUB ================= */
-async function getPrice(symbol){
-
-if(priceCache[symbol]){
-return priceCache[symbol];
-}
-
-try{
-let res = await fetch(
-`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_KEY}`
-);
-
-let d = await res.json();
-
-let price = d.c || 0;
-priceCache[symbol] = price;
-
-return price;
-
-}catch(e){
-return 0;
-}
-
-}
-
-/* ================= STOCK ================= */
 function addStock(){
 
-data.stocks.push({
-symbol: stockSymbol.value,
-type: stockType.value,
-qty: Number(stockQty.value),
-price: Number(stockPrice.value)
-});
+  const symbol = document.getElementById("stockSymbol").value.trim().toUpperCase();
 
-save();
+  if(!symbol) return;
+
+  data.stocks.push({
+    symbol: symbol,
+    qty: Number(document.getElementById("stockQty").value),
+    price: Number(document.getElementById("stockPrice").value),
+    type: document.getElementById("stockType").value
+  });
+
+  save();
 }
 
-/* ================= OTHER ================= */
 function addSaving(){
-data.savings.push({
-name: savingName.value,
-amount: Number(savingAmount.value)
-});
-save();
+  data.savings.push({
+    name: document.getElementById("savingName").value,
+    amount: Number(document.getElementById("savingAmount").value)
+  });
+  save();
 }
 
 function addFixed(){
-data.fixedDeposits.push({
-bank: fixedBank.value,
-amount: Number(fixedAmount.value),
-rate: Number(fixedRate.value),
-date: fixedDate.value
-});
-save();
+  data.fixedDeposits.push({
+    bank: document.getElementById("fixedBank").value,
+    amount: Number(document.getElementById("fixedAmount").value),
+    rate: Number(document.getElementById("fixedRate").value),
+    date: document.getElementById("fixedDate").value
+  });
+  save();
 }
 
 function addDebt(){
-data.debts.push({
-name: debtName.value,
-amount: Number(debtAmount.value)
-});
-save();
+  data.debts.push({
+    name: document.getElementById("debtName").value,
+    amount: Number(document.getElementById("debtAmount").value)
+  });
+  save();
 }
 
-/* ================= RENDER ================= */
 function render(){
 
-let map = {};
+  let stockHTML = "";
+  let stockTotal = 0;
 
-data.stocks.forEach(t => {
+  let positions = {};
 
-if(!map[t.symbol]){
-map[t.symbol] = {buy:0,sell:0,cost:0};
+  data.stocks.forEach(t=>{
+
+    if(!positions[t.symbol]){
+      positions[t.symbol] = {
+        buyQty:0,
+        sellQty:0,
+        cost:0
+      };
+    }
+
+    if(t.type==="BUY"){
+      positions[t.symbol].buyQty += t.qty;
+      positions[t.symbol].cost += t.qty * t.price;
+    }
+
+    if(t.type==="SELL"){
+      positions[t.symbol].sellQty += t.qty;
+    }
+
+  });
+
+  Object.keys(positions).forEach(symbol=>{
+
+    const p = positions[symbol];
+
+    const qty = p.buyQty - p.sellQty;
+
+    if(qty <= 0) return;
+
+    const avgCost = p.cost / p.buyQty;
+    const value = qty * avgCost;
+
+    stockTotal += value;
+
+    stockHTML += `
+      <tr>
+        <td>${symbol}</td>
+        <td>${qty}</td>
+        <td>${avgCost.toFixed(2)}</td>
+        <td>${value.toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("stockTable").innerHTML = stockHTML;
+
+  let savingHTML = "";
+  let savingTotal = 0;
+
+  data.savings.forEach(s=>{
+    savingTotal += s.amount;
+    savingHTML += `
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.amount}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("savingTable").innerHTML = savingHTML;
+
+  let fixedHTML = "";
+  let fixedTotal = 0;
+
+  data.fixedDeposits.forEach(f=>{
+    fixedTotal += f.amount;
+    fixedHTML += `
+      <tr>
+        <td>${f.bank}</td>
+        <td>${f.amount}</td>
+        <td>${f.rate}%</td>
+        <td>${f.date}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("fixedTable").innerHTML = fixedHTML;
+
+  let debtHTML = "";
+  let debtTotal = 0;
+
+  data.debts.forEach(d=>{
+    debtTotal += d.amount;
+    debtHTML += `
+      <tr>
+        <td>${d.name}</td>
+        <td>${d.amount}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("debtTable").innerHTML = debtHTML;
+
+  document.getElementById("stockTotal").textContent = stockTotal.toFixed(2);
+  document.getElementById("savingTotal").textContent = savingTotal.toFixed(2);
+  document.getElementById("fixedTotal").textContent = fixedTotal.toFixed(2);
+  document.getElementById("debtTotal").textContent = debtTotal.toFixed(2);
+
+  document.getElementById("netWorth").textContent =
+    (stockTotal + savingTotal + fixedTotal - debtTotal).toFixed(2);
 }
 
-if(t.type==="BUY"){
-map[t.symbol].buy += t.qty;
-map[t.symbol].cost += t.qty * t.price;
-}
-
-if(t.type==="SELL"){
-map[t.symbol].sell += t.qty;
-}
-
-});
-
-/* STOCK TABLE */
-let stockHTML = "";
-let stockTotal = 0;
-
-for(let symbol of Object.keys(map)){
-
-let s = map[symbol];
-
-let qty = s.buy - s.sell;
-
-if(qty <= 0) continue;
-
-let avgCost = s.buy ? s.cost / s.buy : 0;
-
-/* 🔥 FIXED PRICE LOGIC */
-let price = priceCache[symbol] || avgCost;
-
-let value = qty * price;
-let pnl = (price - avgCost) * qty;
-
-stockTotal += value;
-
-let color = pnl >= 0 ? "green" : "red";
-
-stockHTML += `
-<tr>
-<td>${symbol}</td>
-<td>${qty}</td>
-<td>${avgCost.toFixed(2)}</td>
-<td>${price.toFixed(2)}</td>
-<td style="color:${color};font-weight:bold">
-${pnl.toFixed(2)}
-</td>
-</tr>
-`;
-
-}
-
-document.getElementById("stockTable").innerHTML = stockHTML;
-
-/* SAVINGS */
-let savingHTML = "";
-let savingTotal = 0;
-
-data.savings.forEach(s=>{
-savingTotal += s.amount;
-savingHTML += `<tr><td>${s.name}</td><td>${s.amount}</td></tr>`;
-});
-
-document.getElementById("savingTable").innerHTML = savingHTML;
-
-/* FIXED */
-let fixedHTML = "";
-let fixedTotal = 0;
-
-data.fixedDeposits.forEach(f=>{
-fixedTotal += f.amount;
-fixedHTML += `
-<tr>
-<td>${f.bank}</td>
-<td>${f.amount}</td>
-<td>${f.rate}%</td>
-<td>${f.date}</td>
-</tr>`;
-});
-
-document.getElementById("fixedTable").innerHTML = fixedHTML;
-
-/* DEBT */
-let debtHTML = "";
-let debtTotal = 0;
-
-data.debts.forEach(d=>{
-debtTotal += d.amount;
-debtHTML += `<tr><td>${d.name}</td><td>${d.amount}</td></tr>`;
-});
-
-document.getElementById("debtTable").innerHTML = debtHTML;
-
-/* DASHBOARD */
-document.getElementById("stockTotalEl").textContent = stockTotal.toFixed(2);
-document.getElementById("savingTotalEl").textContent = savingTotal.toFixed(2);
-document.getElementById("fixedTotalEl").textContent = fixedTotal.toFixed(2);
-document.getElementById("debtTotalEl").textContent = debtTotal.toFixed(2);
-
-document.getElementById("netWorthEl").textContent =
-(stockTotal + savingTotal + fixedTotal - debtTotal).toFixed(2);
-
-}
-
-/* INIT */
 render();
-
-/* AUTO REFRESH PRICE CACHE */
-setInterval(() => {
-priceCache = {};
-render();
-}, 30000);
 
 </script>
 
