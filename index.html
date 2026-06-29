@@ -19,13 +19,13 @@ body{
     border-radius:10px;
 }
 
-input{
+input,select{
     padding:8px;
     margin:3px;
 }
 
 button{
-    padding:6px 10px;
+    padding:8px 12px;
     cursor:pointer;
 }
 
@@ -59,22 +59,26 @@ th,td{
 </div>
 
 <div class="card">
-<h2>股票</h2>
+<h2>股票交易</h2>
 
 <input id="stockSymbol" placeholder="代號">
 <input id="stockQty" type="number" placeholder="數量">
-<input id="stockCost" type="number" placeholder="成本價">
+<input id="stockPrice" type="number" placeholder="價格">
 
-<button onclick="addStock()">新增</button>
+<select id="stockType">
+<option value="BUY">BUY</option>
+<option value="SELL">SELL</option>
+</select>
+
+<button onclick="addStock()">新增交易</button>
 
 <table>
 <thead>
 <tr>
 <th>代號</th>
-<th>數量</th>
-<th>成本價</th>
-<th>成本值</th>
-<th>操作</th>
+<th>持倉</th>
+<th>平均成本</th>
+<th>市值</th>
 </tr>
 </thead>
 <tbody id="stockTable"></tbody>
@@ -94,7 +98,6 @@ th,td{
 <tr>
 <th>戶口</th>
 <th>金額</th>
-<th>操作</th>
 </tr>
 </thead>
 <tbody id="savingTable"></tbody>
@@ -118,7 +121,6 @@ th,td{
 <th>金額</th>
 <th>利率</th>
 <th>到期日</th>
-<th>操作</th>
 </tr>
 </thead>
 <tbody id="fixedTable"></tbody>
@@ -138,7 +140,6 @@ th,td{
 <tr>
 <th>名稱</th>
 <th>金額</th>
-<th>操作</th>
 </tr>
 </thead>
 <tbody id="debtTable"></tbody>
@@ -146,6 +147,8 @@ th,td{
 </div>
 
 <script>
+
+/* ---------------- DATA ---------------- */
 
 let data = JSON.parse(localStorage.getItem("portfolio")) || {
 stocks:[],
@@ -159,34 +162,27 @@ localStorage.setItem("portfolio", JSON.stringify(data));
 render();
 }
 
-/* ---------------- STOCK ---------------- */
+/* ---------------- STOCK TRADE ---------------- */
 
 function addStock(){
+
 data.stocks.push({
 symbol: stockSymbol.value,
+type: stockType.value,
 qty: Number(stockQty.value),
-cost: Number(stockCost.value)
+price: Number(stockPrice.value)
 });
+
 save();
 }
 
-function deleteStock(i){
-data.stocks.splice(i,1);
-save();
-}
-
-/* ---------------- SAVING ---------------- */
+/* ---------------- SAVINGS ---------------- */
 
 function addSaving(){
 data.savings.push({
 name: savingName.value,
 amount: Number(savingAmount.value)
 });
-save();
-}
-
-function deleteSaving(i){
-data.savings.splice(i,1);
 save();
 }
 
@@ -202,11 +198,6 @@ date: fixedDate.value
 save();
 }
 
-function deleteFixed(i){
-data.fixedDeposits.splice(i,1);
-save();
-}
-
 /* ---------------- DEBT ---------------- */
 
 function addDebt(){
@@ -217,59 +208,83 @@ amount: Number(debtAmount.value)
 save();
 }
 
-function deleteDebt(i){
-data.debts.splice(i,1);
-save();
-}
-
 /* ---------------- RENDER ---------------- */
 
 function render(){
 
+/* STOCK CALC */
+let map = {};
+
+data.stocks.forEach(t => {
+
+if(!map[t.symbol]){
+map[t.symbol] = {
+buyQty:0,
+sellQty:0,
+cost:0
+};
+}
+
+if(t.type === "BUY"){
+map[t.symbol].buyQty += t.qty;
+map[t.symbol].cost += t.qty * t.price;
+}
+
+if(t.type === "SELL"){
+map[t.symbol].sellQty += t.qty;
+}
+
+});
+
+/* STOCK TABLE */
 let stockHTML = "";
 let stockTotal = 0;
 
-data.stocks.forEach((s,i)=>{
-let value = s.qty * s.cost;
+Object.keys(map).forEach(symbol => {
+
+let s = map[symbol];
+
+let qty = s.buyQty - s.sellQty;
+let avgCost = s.buyQty ? s.cost / s.buyQty : 0;
+
+let value = qty * avgCost;
 stockTotal += value;
 
 stockHTML += `
 <tr>
-<td>${s.symbol}</td>
-<td>${s.qty}</td>
-<td>${s.cost}</td>
+<td>${symbol}</td>
+<td>${qty}</td>
+<td>${avgCost.toFixed(2)}</td>
 <td>${value.toFixed(2)}</td>
-<td><button onclick="deleteStock(${i})">Delete</button></td>
 </tr>
 `;
+
 });
 
 stockTable.innerHTML = stockHTML;
 
-
-/* savings */
+/* SAVINGS */
 let savingHTML = "";
 let savingTotal = 0;
 
-data.savings.forEach((s,i)=>{
+data.savings.forEach(s=>{
 savingTotal += s.amount;
 
 savingHTML += `
 <tr>
 <td>${s.name}</td>
 <td>${s.amount}</td>
-<td><button onclick="deleteSaving(${i})">Delete</button></td>
 </tr>
 `;
 });
 
 savingTable.innerHTML = savingHTML;
 
-/* fixed */
+/* FIXED */
 let fixedHTML = "";
 let fixedTotal = 0;
 
-data.fixedDeposits.forEach((f,i)=>{
+data.fixedDeposits.forEach(f=>{
 fixedTotal += f.amount;
 
 fixedHTML += `
@@ -278,32 +293,30 @@ fixedHTML += `
 <td>${f.amount}</td>
 <td>${f.rate}%</td>
 <td>${f.date}</td>
-<td><button onclick="deleteFixed(${i})">Delete</button></td>
 </tr>
 `;
 });
 
 fixedTable.innerHTML = fixedHTML;
 
-/* debt */
+/* DEBT */
 let debtHTML = "";
 let debtTotal = 0;
 
-data.debts.forEach((d,i)=>{
+data.debts.forEach(d=>{
 debtTotal += d.amount;
 
 debtHTML += `
 <tr>
 <td>${d.name}</td>
 <td>${d.amount}</td>
-<td><button onclick="deleteDebt(${i})">Delete</button></td>
 </tr>
 `;
 });
 
 debtTable.innerHTML = debtHTML;
 
-/* dashboard */
+/* DASHBOARD */
 stockTotalEl.textContent = stockTotal.toFixed(2);
 savingTotalEl.textContent = savingTotal.toFixed(2);
 fixedTotalEl.textContent = fixedTotal.toFixed(2);
@@ -311,8 +324,10 @@ debtTotalEl.textContent = debtTotal.toFixed(2);
 
 netWorthEl.textContent =
 (stockTotal + savingTotal + fixedTotal - debtTotal).toFixed(2);
+
 }
 
+/* init */
 render();
 
 </script>
