@@ -160,13 +160,6 @@ let data = JSON.parse(localStorage.getItem("portfolio")) || {
   debts: []
 };
 
-let data = JSON.parse(localStorage.getItem("portfolio")) || {
-  stocks: [],
-  savings: [],
-  fixedDeposits: [],
-  debts: []
-};
-
 function save(){
   localStorage.setItem("portfolio", JSON.stringify(data));
   render();
@@ -248,7 +241,7 @@ async function render(){
 
     const qty = p.buyQty - p.sellQty;
 
-    if(qty <= 0) return;
+    if(qty <= 0) continue;
 
     const avgCost = p.cost / p.buyQty;
 
