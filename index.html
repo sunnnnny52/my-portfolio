@@ -25,7 +25,7 @@ input{
 }
 
 button{
-    padding:8px 12px;
+    padding:6px 10px;
     cursor:pointer;
 }
 
@@ -39,10 +39,6 @@ th,td{
     border:1px solid #ddd;
     padding:8px;
     text-align:left;
-}
-
-h2{
-    margin-top:0;
 }
 </style>
 </head>
@@ -71,7 +67,8 @@ h2{
 
 <button onclick="addStock()">新增</button>
 
-<table id="stockTable">
+<table>
+<thead>
 <tr>
 <th>代號</th>
 <th>數量</th>
@@ -79,6 +76,8 @@ h2{
 <th>成本值</th>
 <th>操作</th>
 </tr>
+</thead>
+<tbody id="stockTable"></tbody>
 </table>
 </div>
 
@@ -90,12 +89,15 @@ h2{
 
 <button onclick="addSaving()">新增</button>
 
-<table id="savingTable">
+<table>
+<thead>
 <tr>
 <th>戶口</th>
 <th>金額</th>
 <th>操作</th>
 </tr>
+</thead>
+<tbody id="savingTable"></tbody>
 </table>
 </div>
 
@@ -109,13 +111,17 @@ h2{
 
 <button onclick="addFixed()">新增</button>
 
-<table id="fixedTable">
+<table>
+<thead>
 <tr>
 <th>銀行</th>
 <th>金額</th>
 <th>利率</th>
 <th>到期日</th>
+<th>操作</th>
 </tr>
+</thead>
+<tbody id="fixedTable"></tbody>
 </table>
 </div>
 
@@ -127,38 +133,21 @@ h2{
 
 <button onclick="addDebt()">新增</button>
 
-<table id="debtTable">
+<table>
+<thead>
 <tr>
 <th>名稱</th>
 <th>金額</th>
+<th>操作</th>
 </tr>
+</thead>
+<tbody id="debtTable"></tbody>
 </table>
 </div>
 
-function deleteStock(index){
-  data.stocks.splice(index,1);
-  save();
-}
-
-function deleteSaving(index){
-  data.savings.splice(index,1);
-  save();
-}
-
-function deleteFixed(index){
-  data.fixedDeposits.splice(index,1);
-  save();
-}
-
-function deleteDebt(index){
-  data.debts.splice(index,1);
-  save();
-}
-
 <script>
 
-let data =
-JSON.parse(localStorage.getItem("portfolio")) || {
+let data = JSON.parse(localStorage.getItem("portfolio")) || {
 stocks:[],
 savings:[],
 fixedDeposits:[],
@@ -166,184 +155,162 @@ debts:[]
 };
 
 function save(){
-localStorage.setItem(
-"portfolio",
-JSON.stringify(data)
-);
+localStorage.setItem("portfolio", JSON.stringify(data));
 render();
 }
 
+/* ---------------- STOCK ---------------- */
+
 function addStock(){
-
 data.stocks.push({
-symbol:document.getElementById("stockSymbol").value,
-qty:Number(document.getElementById("stockQty").value),
-cost:Number(document.getElementById("stockCost").value)
+symbol: stockSymbol.value,
+qty: Number(stockQty.value),
+cost: Number(stockCost.value)
 });
-
 save();
 }
+
+function deleteStock(i){
+data.stocks.splice(i,1);
+save();
+}
+
+/* ---------------- SAVING ---------------- */
 
 function addSaving(){
-
 data.savings.push({
-name:document.getElementById("savingName").value,
-amount:Number(document.getElementById("savingAmount").value)
+name: savingName.value,
+amount: Number(savingAmount.value)
 });
-
 save();
 }
+
+function deleteSaving(i){
+data.savings.splice(i,1);
+save();
+}
+
+/* ---------------- FIXED ---------------- */
 
 function addFixed(){
-
 data.fixedDeposits.push({
-bank:document.getElementById("fixedBank").value,
-amount:Number(document.getElementById("fixedAmount").value),
-rate:Number(document.getElementById("fixedRate").value),
-date:document.getElementById("fixedDate").value
+bank: fixedBank.value,
+amount: Number(fixedAmount.value),
+rate: Number(fixedRate.value),
+date: fixedDate.value
 });
-
 save();
 }
+
+function deleteFixed(i){
+data.fixedDeposits.splice(i,1);
+save();
+}
+
+/* ---------------- DEBT ---------------- */
 
 function addDebt(){
-
 data.debts.push({
-name:document.getElementById("debtName").value,
-amount:Number(document.getElementById("debtAmount").value)
+name: debtName.value,
+amount: Number(debtAmount.value)
 });
-
 save();
 }
+
+function deleteDebt(i){
+data.debts.splice(i,1);
+save();
+}
+
+/* ---------------- RENDER ---------------- */
 
 function render(){
 
-stockTable += `
-<tr>
-<td>${s.symbol}</td>
-<td>${s.qty}</td>
-<td>${s.cost}</td>
-<td>${value.toFixed(2)}</td>
-<td>
-<button onclick="deleteStock(${data.stocks.indexOf(s)})">
-Delete
-</button>
-</td>
-</tr>
-`;
-
+let stockHTML = "";
 let stockTotal = 0;
 
-data.stocks.forEach(s=>{
-
+data.stocks.forEach((s,i)=>{
 let value = s.qty * s.cost;
-
 stockTotal += value;
 
-stockTable += `
+stockHTML += `
 <tr>
 <td>${s.symbol}</td>
 <td>${s.qty}</td>
 <td>${s.cost}</td>
 <td>${value.toFixed(2)}</td>
+<td><button onclick="deleteStock(${i})">Delete</button></td>
 </tr>
 `;
 });
 
-document.getElementById("stockTable").innerHTML =
-stockTable;
+stockTable.innerHTML = stockHTML;
 
-let savingTable =
-`<tr><th>戶口</th><th>金額</th></tr>`;
 
+/* savings */
+let savingHTML = "";
 let savingTotal = 0;
 
-data.savings.forEach((s,index)=>{
-
+data.savings.forEach((s,i)=>{
 savingTotal += s.amount;
 
-savingTable += `
+savingHTML += `
 <tr>
 <td>${s.name}</td>
 <td>${s.amount}</td>
-<td>
-<button onclick="deleteSaving(${index})">
-Delete
-</button>
-</td>
+<td><button onclick="deleteSaving(${i})">Delete</button></td>
 </tr>
 `;
+});
 
-document.getElementById("savingTable").innerHTML =
-savingTable;
+savingTable.innerHTML = savingHTML;
 
-let fixedTable =
-`<tr>
-<th>銀行</th>
-<th>金額</th>
-<th>利率</th>
-<th>到期日</th>
-</tr>`;
-
+/* fixed */
+let fixedHTML = "";
 let fixedTotal = 0;
 
-data.fixedDeposits.forEach(f=>{
-
+data.fixedDeposits.forEach((f,i)=>{
 fixedTotal += f.amount;
 
-fixedTable += `
+fixedHTML += `
 <tr>
 <td>${f.bank}</td>
 <td>${f.amount}</td>
 <td>${f.rate}%</td>
 <td>${f.date}</td>
+<td><button onclick="deleteFixed(${i})">Delete</button></td>
 </tr>
 `;
 });
 
-document.getElementById("fixedTable").innerHTML =
-fixedTable;
+fixedTable.innerHTML = fixedHTML;
 
-let debtTable =
-`<tr><th>名稱</th><th>金額</th></tr>`;
-
+/* debt */
+let debtHTML = "";
 let debtTotal = 0;
 
-data.debts.forEach(d=>{
-
+data.debts.forEach((d,i)=>{
 debtTotal += d.amount;
 
-debtTable += `
+debtHTML += `
 <tr>
 <td>${d.name}</td>
 <td>${d.amount}</td>
+<td><button onclick="deleteDebt(${i})">Delete</button></td>
 </tr>
 `;
 });
 
-document.getElementById("debtTable").innerHTML =
-debtTable;
+debtTable.innerHTML = debtHTML;
 
-document.getElementById("stockTotal").innerText =
-stockTotal.toFixed(2);
+/* dashboard */
+stockTotalEl.textContent = stockTotal.toFixed(2);
+savingTotalEl.textContent = savingTotal.toFixed(2);
+fixedTotalEl.textContent = fixedTotal.toFixed(2);
+debtTotalEl.textContent = debtTotal.toFixed(2);
 
-document.getElementById("savingTotal").innerText =
-savingTotal.toFixed(2);
-
-document.getElementById("fixedTotal").innerText =
-fixedTotal.toFixed(2);
-
-document.getElementById("debtTotal").innerText =
-debtTotal.toFixed(2);
-
-let netWorth =
-stockTotal +
-savingTotal +
-fixedTotal -
-debtTotal;
-
-document.getElementById("netWorth").innerText =
-netWorth.toFixed(2);
+netWorthEl.textContent =
+(stockTotal + savingTotal + fixedTotal - debtTotal).toFixed(2);
 }
 
 render();
