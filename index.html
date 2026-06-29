@@ -70,7 +70,9 @@ th,td{
 <th>股票</th>
 <th>持倉</th>
 <th>平均成本</th>
-<th>持倉成本值</th>
+<th>現價</th>
+<th>PnL</th>
+<th>市值</th>
 </tr>
 </thead>
 <tbody id="stockTable"></tbody>
@@ -119,6 +121,44 @@ th,td{
 </div>
 
 <script>
+
+const FINNHUB_KEY = "你的新APIKEY";
+let priceCache = {};
+
+async function getPrice(symbol){
+
+  if(priceCache[symbol]){
+    return priceCache[symbol];
+  }
+
+  try{
+
+    const res = await fetch(
+      `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_KEY}`
+    );
+
+    const data = await res.json();
+
+    const price = data.c || 0;
+
+    priceCache[symbol] = price;
+
+    return price;
+
+  }catch(err){
+
+    console.error(err);
+
+    return 0;
+  }
+}
+
+let data = JSON.parse(localStorage.getItem("portfolio")) || {
+  stocks: [],
+  savings: [],
+  fixedDeposits: [],
+  debts: []
+};
 
 let data = JSON.parse(localStorage.getItem("portfolio")) || {
   stocks: [],
@@ -174,7 +214,7 @@ function addDebt(){
   save();
 }
 
-function render(){
+async function render(){
 
   let stockHTML = "";
   let stockTotal = 0;
@@ -202,7 +242,7 @@ function render(){
 
   });
 
-  Object.keys(positions).forEach(symbol=>{
+  for(const symbol of Object.keys(positions)){
 
     const p = positions[symbol];
 
@@ -211,19 +251,33 @@ function render(){
     if(qty <= 0) return;
 
     const avgCost = p.cost / p.buyQty;
-    const value = qty * avgCost;
 
-    stockTotal += value;
+let currentPrice = await getPrice(symbol);
 
-    stockHTML += `
-      <tr>
-        <td>${symbol}</td>
-        <td>${qty}</td>
-        <td>${avgCost.toFixed(2)}</td>
-        <td>${value.toFixed(2)}</td>
-      </tr>
-    `;
-  });
+if(currentPrice === 0){
+  currentPrice = avgCost;
+}
+
+const value = qty * currentPrice;
+
+const pnl =
+  (currentPrice - avgCost) * qty;
+
+stockTotal += value;
+
+stockHTML += `
+<tr>
+<td>${symbol}</td>
+<td>${qty}</td>
+<td>${avgCost.toFixed(2)}</td>
+<td>${currentPrice.toFixed(2)}</td>
+<td class="${pnl >= 0 ? 'profit' : 'loss'}">
+${pnl.toFixed(2)}
+</td>
+<td>${value.toFixed(2)}</td>
+</tr>
+`;
+}
 
   document.getElementById("stockTable").innerHTML = stockHTML;
 
@@ -284,6 +338,14 @@ function render(){
 }
 
 render();
+
+setInterval(() => {
+
+  priceCache = {};
+
+  render();
+
+}, 60000);
 
 </script>
 
