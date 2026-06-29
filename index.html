@@ -245,6 +245,28 @@ Object.keys(map).forEach(symbol => {
 let s = map[symbol];
 
 let qty = s.buyQty - s.sellQty;
+
+/* 🔥 加呢行：0 持倉直接跳過 */
+if(qty === 0) return;
+
+let avgCost = s.buyQty ? s.cost / s.buyQty : 0;
+let value = qty * avgCost;
+stockTotal += value;
+
+stockHTML += `
+<tr>
+<td>${symbol}</td>
+<td>${qty}</td>
+<td>${avgCost.toFixed(2)}</td>
+<td>${value.toFixed(2)}</td>
+</tr>
+`;
+
+});
+
+let s = map[symbol];
+
+let qty = s.buyQty - s.sellQty;
 let avgCost = s.buyQty ? s.cost / s.buyQty : 0;
 
 let value = qty * avgCost;
